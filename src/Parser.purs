@@ -19,47 +19,47 @@ runParser :: ∀ a. Parser a -> State -> Maybe (Tuple State a)
 runParser (Parser p) s = p s
 
 instance functorParser :: Functor Parser where
-    map f pa = Parser \s -> do
-        Tuple state a <- runParser pa s
-        pure (Tuple state $ f a)
+  map f pa = Parser \s -> do
+    Tuple state a <- runParser pa s
+    pure (Tuple state $ f a)
 
 instance applyParser :: Apply Parser where
-    apply pf pa = Parser \s -> do
-        Tuple state f <- runParser pf s
-        Tuple state' a <- runParser pa state
-        pure (Tuple state' $ f a)
+  apply pf pa = Parser \s -> do
+    Tuple state f <- runParser pf s
+    Tuple state' a <- runParser pa state
+    pure (Tuple state' $ f a)
 
 instance applicativeParser :: Applicative Parser where
-    pure a = Parser \s -> Just (Tuple s a)
+  pure a = Parser \s -> Just (Tuple s a)
 
 instance bindParser :: Bind Parser where
-    bind pa f = Parser \s -> do
-        Tuple s' a <- runParser pa s
-        runParser (f a) s'
+  bind pa f = Parser \s -> do
+    Tuple s' a <- runParser pa s
+    runParser (f a) s'
 
 instance monadParser :: Monad Parser
 
 instance altParser :: Alt Parser where
   alt pa pb = Parser \s ->
     case runParser pa s of
-        Just res -> Just res
-        Nothing -> runParser pb s
+      Just res -> Just res
+      Nothing -> runParser pb s
 
 instance plusParser :: Plus Parser where
-    empty = Parser \_ -> Nothing
+  empty = Parser \_ -> Nothing
 
 instance alternativeParser :: Alternative Parser
 
 instance lazyParser :: Lazy (Parser a) where
-    defer f = Parser \s -> runParser (f unit) s
+  defer f = Parser \s -> runParser (f unit) s
 
 charP :: (Char -> Boolean) -> Parser Char
 charP p = Parser \arr -> do
-    x  <- head arr -- parsed
-    xs <- tail arr -- new state
-    if p x
-    then pure $ Tuple xs x
-    else Nothing
+  x  <- head arr -- parsed
+  xs <- tail arr -- new state
+  if p x
+  then pure $ Tuple xs x
+  else Nothing
 
 char :: Char -> Parser Char
 char c = charP \c' -> c == c'
@@ -69,15 +69,15 @@ digit = charP isDigit
 
 posNumber' :: Parser Int
 posNumber' = do
-    x <- map (fromString <<< fromCharArray) $ some digit
-    case x of
-        Just v -> pure v
-        Nothing -> empty
+  x <- map (fromString <<< fromCharArray) $ some digit
+  case x of
+    Just v -> pure v
+    Nothing -> empty
 
 posNumber :: Parser Int
 posNumber =
-    (char '+' *> posNumber')
-    <|> posNumber'
+  (char '+' *> posNumber')
+  <|> posNumber'
 
 negNumber :: Parser Int
 negNumber = do
@@ -91,27 +91,27 @@ number = posNumber <|> negNumber
 
 expr' :: Unit -> Parser Int
 expr' _ = do
-    x <- term' unit
-    _ <- char '+'
-    y <- expr' unit
-    pure $ x + y
-    <|> term' unit
+  x <- term' unit
+  _ <- char '+'
+  y <- expr' unit
+  pure $ x + y
+  <|> term' unit
 
 term' :: Unit -> Parser Int
 term' _ = do
-    x <- factor' unit
-    _ <- char '*'
-    y <- term' unit
-    pure $ x * y
-    <|> factor' unit
+  x <- factor' unit
+  _ <- char '*'
+  y <- term' unit
+  pure $ x * y
+  <|> factor' unit
 
 factor' :: Unit -> Parser Int
 factor' _ = do
-    _ <- char '('
-    x <- expr' unit
-    _ <- char ')'
-    pure x
-    <|> number
+  _ <- char '('
+  x <- expr' unit
+  _ <- char ')'
+  pure x
+  <|> number
 
 expr :: Parser Int
 expr = defer expr'
