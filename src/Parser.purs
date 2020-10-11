@@ -21,16 +21,6 @@ instance functorParser :: Functor Parser where
         Tuple state a <- runParser pa s
         pure (Tuple state $ f a)
 
--- shit
--- instance applyParser :: Apply Parser where
---     apply pf pa = Parser \s ->
---         case runParser s pf of
---             Nothing-> Nothing
---             Just (Tuple state f) ->
---                 case runParser state pa of
---                     Nothing-> Nothing
---                     Just (Tuple state' a) -> Just (Tuple state' $ f a)
-
 instance applyParser :: Apply Parser where
     apply pf pa = Parser \s -> do
         Tuple state f <- runParser pf s
@@ -45,7 +35,6 @@ instance bindParser :: Bind Parser where
         Tuple s' a <- runParser pa s
         runParser (f a) s
 
--- ??
 instance monadParser :: Monad Parser
 
 instance altParser :: Alt Parser where
