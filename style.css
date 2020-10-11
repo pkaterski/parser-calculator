@@ -1,0 +1,27 @@
+body {
+    background-color: rgb(237, 237, 237);
+}
+
+.container {
+    text-align: center;
+}
+#screen {
+    background-color: rgb(237, 237, 237);
+    border: 4px dashed rgb(1, 11, 70);
+    color: rgb(1, 11, 70);
+    font-family: fantasy;
+    width: 100%;
+    font-weight: bold;
+    text-align: right;
+    margin: 1em;
+    font-size: 300%;
+    margin-left: auto;
+    margin-right: auto;
+}
+.btn {
+    font-family: fantasy;
+    margin: .2em;
+    font-size: 300%;
+    width: 4em;
+    height: 4em;
+}

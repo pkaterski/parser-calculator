@@ -45,8 +45,14 @@ render state =
   HH.div
     [ HP.classes [ HH.ClassName "container" ]]
     $ [ HH.br_
-    , HH.input [ HP.type_  HP.InputText, HP.readOnly true, HP.value $ fromCharArray state ]
-    ] <> funcpad <> numberpad <> bracketpad <> operpad
+    , HH.input 
+      [ HP.id_ "screen"
+      , HP.type_  HP.InputText
+      , HP.readOnly true
+      , HP.value $ fromCharArray state 
+      ]
+    , HH.br_]
+    <> funcpad <> numberpad <> bracketpad <> operpad
 
 numberpad :: ∀ m. Array(H.ComponentHTML Action () m)
 numberpad = do
