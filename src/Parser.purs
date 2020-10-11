@@ -2,11 +2,13 @@ module Parser where
 
 import Prelude
 
-import Control.Alternative (class Alt, class Plus, class Alternative)
-import Control.Lazy (class Lazy)
-import Data.Array (head, tail)
+import Control.Alternative (class Alt, class Alternative, class Plus, empty, (<|>))
+import Control.Lazy (class Lazy, defer)
+import Data.Array (head, tail, some)
 import Data.Char.Unicode (isDigit)
+import Data.Int (fromString)
 import Data.Maybe (Maybe(..))
+import Data.String.CodeUnits (fromCharArray)
 import Data.Tuple (Tuple(..))
 
 type State = Array Char
@@ -51,13 +53,65 @@ instance alternativeParser :: Alternative Parser
 instance lazyParser :: Lazy (Parser a) where
     defer f = Parser \s -> runParser (f unit) s
 
-char :: (Char -> Boolean) -> Parser Char
-char p = Parser \arr -> do
+charP :: (Char -> Boolean) -> Parser Char
+charP p = Parser \arr -> do
     x  <- head arr -- parsed
     xs <- tail arr -- new state
     if p x
     then pure $ Tuple xs x
     else Nothing
 
+char :: Char -> Parser Char
+char c = charP \c' -> c == c'
+
 digit :: Parser Char
-digit = char isDigit
+digit = charP isDigit
+
+posNumber' :: Parser Int
+posNumber' = do
+    x <- map (fromString <<< fromCharArray) $ some digit
+    case x of
+        Just v -> pure v
+        Nothing -> empty
+
+posNumber :: Parser Int
+posNumber =
+    (char '+' *> posNumber')
+    <|> posNumber'
+
+negNumber :: Parser Int
+negNumber = do
+  _ <- char '-'
+  x <- posNumber
+  pure $ -x
+
+-- TODO: make it work for floats
+number :: Parser Int
+number = posNumber <|> negNumber
+
+expr' :: Unit -> Parser Int
+expr' _ = do
+    x <- term' unit
+    _ <- char '+'
+    y <- expr' unit
+    pure $ x + y
+    <|> term' unit
+
+term' :: Unit -> Parser Int
+term' _ = do
+    x <- factor' unit
+    _ <- char '*'
+    y <- term' unit
+    pure $ x * y
+    <|> factor' unit
+
+factor' :: Unit -> Parser Int
+factor' _ = do
+    _ <- char '('
+    x <- expr' unit
+    _ <- char ')'
+    pure x
+    <|> number
+
+expr :: Parser Int
+expr = defer expr'
