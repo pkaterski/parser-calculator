@@ -95,6 +95,11 @@ expr' _ = do
   _ <- char '+'
   y <- expr' unit
   pure $ x + y
+  <|> do
+    x <- term' unit
+    _ <- char '-'
+    y <- expr' unit
+    pure $ x - y
   <|> term' unit
 
 term' :: Unit -> Parser Int
