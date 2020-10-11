@@ -26,8 +26,15 @@ data Action =
   | Calculate
   | Insert String
 
-type State = Array Char
+data State =
+    Working (Array Char)
+  | Error String
 
+derive instance eqState :: Eq State
+
+instance showState :: Show State where
+  show (Working arr) = fromCharArray arr
+  show (Error err) = err
 
 component :: ∀ query input output m. H.Component HH.HTML query input output m
 component =
@@ -38,7 +45,7 @@ component =
     }
 
 initialState :: ∀ input. input -> State
-initialState _ = ['0']
+initialState _ = Working ['0']
 
 render :: ∀ m. State -> H.ComponentHTML Action () m
 render state =
@@ -49,7 +56,7 @@ render state =
       [ HP.id_ "screen"
       , HP.type_  HP.InputText
       , HP.readOnly true
-      , HP.value $ fromCharArray state 
+      , HP.value $ show state 
       ]
     , HH.br_]
     <> funcpad <> numberpad <> bracketpad <> operpad
@@ -97,17 +104,19 @@ handleAction = case _ of
   Insert s -> H.modify_ $ insertString s
 
 insertString :: String -> State -> State
-insertString s state =
+insertString s (Working state) =
   if state == ['0']
-  then toCharArray s
-  else state <> toCharArray s
+  then Working $ toCharArray s
+  else Working $ state <> toCharArray s
+insertString _ (Error err) = Error err
 
 calculate :: State -> State
-calculate s =
+calculate (Working s) =
   case runParser expr s of
     Just (Tuple [] n) ->
       case radix 10 of -- this shit is necessary..
-        Just r -> toCharArray $ toStringAs r n
-        Nothing -> [] -- never gonna go here
-    Just (Tuple _ _) -> toCharArray "unparsable"
-    Nothing -> toCharArray "unparsable"
+        Just r -> Working $ toCharArray $ toStringAs r n
+        Nothing -> Error "the impossible has happened" -- never gonna go here
+    Just (Tuple remainder _) -> Error $ "unparsable after: " <> fromCharArray remainder
+    Nothing -> Error "unparsable"
+calculate (Error err) = Error err
