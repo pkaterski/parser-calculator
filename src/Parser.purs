@@ -33,7 +33,7 @@ instance applicativeParser :: Applicative Parser where
 instance bindParser :: Bind Parser where
     bind pa f = Parser \s -> do
         Tuple s' a <- runParser pa s
-        runParser (f a) s
+        runParser (f a) s'
 
 instance monadParser :: Monad Parser
 
