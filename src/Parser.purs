@@ -4,6 +4,8 @@ import Prelude
 
 import Control.Alternative (class Alt, class Plus, class Alternative)
 import Control.Lazy (class Lazy)
+import Data.Array (head, tail)
+import Data.Char.Unicode (isDigit)
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
 
@@ -59,3 +61,14 @@ instance alternativeParser :: Alternative Parser
 
 instance lazyParser :: Lazy (Parser a) where
     defer f = Parser \s -> runParser (f unit) s
+
+char :: (Char -> Boolean) -> Parser Char
+char p = Parser \arr -> do
+    x  <- head arr -- parsed
+    xs <- tail arr -- new state
+    if p x
+    then pure $ Tuple xs x
+    else Nothing
+
+digit :: Parser Char
+digit = char isDigit
