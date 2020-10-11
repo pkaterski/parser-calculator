@@ -5,7 +5,7 @@ import Prelude
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
 
-type State = String
+type State = Array Char
 
 newtype Parser a = Parser (State -> Maybe (Tuple State a))
 

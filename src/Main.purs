@@ -4,6 +4,7 @@ import Prelude
 
 import Data.Array (range)
 import Data.Maybe (Maybe(..))
+import Data.String.CodeUnits (toCharArray, fromCharArray)
 import Effect (Effect)
 import Halogen as H
 import Halogen.Aff as HA
@@ -22,7 +23,7 @@ data Action =
   | Calculate
   | Insert String
 
-type State = String
+type State = Array Char
 
 
 component :: ∀ query input output m. H.Component HH.HTML query input output m
@@ -34,14 +35,14 @@ component =
     }
 
 initialState :: ∀ input. input -> State
-initialState _ = ""
+initialState _ = []
 
 render :: ∀ m. State -> H.ComponentHTML Action () m
 render state =
   HH.div
     [ HP.classes [ HH.ClassName "container" ]]
     $ [ HH.br_
-    , HH.input [ HP.type_  HP.InputText, HP.readOnly true, HP.value state ]
+    , HH.input [ HP.type_  HP.InputText, HP.readOnly true, HP.value $ fromCharArray state ]
     ] <> funcpad <> numberpad <> operpad
 
 numberpad :: ∀ m. Array(H.ComponentHTML Action () m)
@@ -70,6 +71,6 @@ funcpad = do
 
 handleAction :: ∀ output m. Action -> H.HalogenM State Action () output m Unit
 handleAction = case _ of
-  Clear -> H.put ""
+  Clear -> H.put []
   Calculate -> H.modify_ \state -> state
-  Insert s -> H.modify_ \state -> state <> s
+  Insert s -> H.modify_ \state -> state <> (toCharArray s)
