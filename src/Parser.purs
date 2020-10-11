@@ -2,6 +2,8 @@ module Parser where
 
 import Prelude
 
+import Control.Alternative (class Alt, class Plus, class Alternative)
+import Control.Lazy (class Lazy)
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
 
@@ -43,3 +45,17 @@ instance bindParser :: Bind Parser where
 
 -- ??
 instance monadParser :: Monad Parser
+
+instance altParser :: Alt Parser where
+  alt pa pb = Parser \s ->
+    case runParser pa s of
+        Just res -> Just res
+        Nothing -> runParser pb s
+
+instance plusParser :: Plus Parser where
+    empty = Parser \_ -> Nothing
+
+instance alternativeParser :: Alternative Parser
+
+instance lazyParser :: Lazy (Parser a) where
+    defer f = Parser \s -> runParser (f unit) s
