@@ -1,7 +1,7 @@
 # simple-calculator
 *very simple calculations via parsing - take yourself back to 1st grade!*
 
-###Instructions:
+### Instructions:
 1. Have [nodejs](https://nodejs.org/en/)
 2. Install PureScript: `npm install -g purescript`
 3. Install Spago: `npm install -g spago`
