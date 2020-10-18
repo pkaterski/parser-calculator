@@ -96,14 +96,14 @@ parserToBool p = Parser \s -> case runParser p s of
 
 expr' :: Unit -> Parser Int
 expr' _
-   =  exprOperation unit '+' explSign (\x y -> x + y)
-  <|> exprOperation unit '-' explSign (\x y -> x - y)
+   =  exprOperation '+' explSign (\x y -> x + y)
+  <|> exprOperation '-' explSign (\x y -> x - y)
   <|> term' unit
   where
     explSign = (char '+' <|> char '-') *> posNumber'
 
-exprOperation :: ∀ a. Unit -> Char -> Parser a -> (Int -> Int -> Int) -> Parser Int
-exprOperation _ c p f = do
+exprOperation :: ∀ a. Char -> Parser a -> (Int -> Int -> Int) -> Parser Int
+exprOperation c p f = do
   x <- term' unit
   _ <- char c
   isNext <- parserToBool p
