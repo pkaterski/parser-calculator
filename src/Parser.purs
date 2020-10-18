@@ -89,18 +89,30 @@ negNumber = do
 number :: Parser Int
 number = posNumber <|> negNumber
 
+parserToBool :: ∀ a. Parser a -> Parser Boolean
+parserToBool p = Parser \s -> case runParser p s of
+  Just (Tuple s' _)  -> Just $ Tuple s' true
+  Nothing            -> Just $ Tuple s false
+
 expr' :: Unit -> Parser Int
-expr' _ = do
-  x <- term' unit
-  _ <- char '+'
-  y <- expr' unit
-  pure $ x + y
-  <|> do
-    x <- term' unit
-    _ <- char '-'
-    y <- expr' unit
-    pure $ x - y
+expr' _
+   =  exprOperation unit '+' explSign (\x y -> x + y)
+  <|> exprOperation unit '-' explSign (\x y -> x - y)
   <|> term' unit
+  where
+    explSign = (char '+' <|> char '-') *> posNumber'
+
+exprOperation :: ∀ a. Unit -> Char -> Parser a -> (Int -> Int -> Int) -> Parser Int
+exprOperation _ c p f = do
+  x <- term' unit
+  _ <- char c
+  isNext <- parserToBool p
+  if isNext
+  then empty
+  else do
+    y <- expr' unit
+    pure $ f x y
+
 
 term' :: Unit -> Parser Int
 term' _ = do
