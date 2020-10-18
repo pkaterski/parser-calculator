@@ -118,9 +118,15 @@ term' :: Unit -> Parser Int
 term' _ = do
   x <- factor' unit
   _ <- char '*'
-  y <- term' unit
-  pure $ x * y
+  isNext <- forbiden
+  if isNext
+  then empty
+  else do
+    y <- term' unit
+    pure $ x * y
   <|> factor' unit
+  where
+    forbiden = parserToBool $ (char '+' <|> char '-') *> posNumber'
 
 factor' :: Unit -> Parser Int
 factor' _ = do
