@@ -142,12 +142,20 @@ insertString s (Working { current: state, previous: old }) =
   else Working { current: state <> toCharArray s, previous: state : old }
 insertString _ (Error err) = Error err
 
+insertIfDifferent :: ∀ a. Eq a => a -> a -> Array a -> Array a
+insertIfDifferent a toCheck arr =
+  if a == toCheck
+  then arr
+  else a : arr
+
 calculate :: State -> State
 calculate w@(Working { current: s, previous: old }) =
   case runParser expr s of
     Just (Tuple [] n) ->
       case radix 10 of -- this shit is necessary..
-        Just r -> Working { current: toCharArray $ toStringAs r n, previous: s : old }
+        Just r ->
+          let new = toCharArray $ toStringAs r n
+          in Working { current: new, previous: insertIfDifferent s new old }
         Nothing -> stateToError w "the impossible has happened" -- never gonna go here
     Just (Tuple remainder _) -> stateToError w $ "unparsable after: " <> fromCharArray remainder
     Nothing -> stateToError w "unparsable"
