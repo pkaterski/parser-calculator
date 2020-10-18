@@ -3,7 +3,7 @@ module Parser where
 import Prelude
 
 import Control.Alternative (class Alt, class Alternative, class Plus, empty, (<|>))
-import Control.Lazy (class Lazy, defer)
+import Control.Lazy (class Lazy)
 import Data.Array (head, tail, some)
 import Data.Char.Unicode (isDigit)
 import Data.Int (fromString)
@@ -94,47 +94,43 @@ parserToBool p = Parser \s -> case runParser p s of
   Just (Tuple s' _)  -> Just $ Tuple s' true
   Nothing            -> Just $ Tuple s false
 
-expr' :: Unit -> Parser Int
-expr' _
+expr :: Parser Int
+expr
    =  exprOperation '+' explSign (\x y -> x + y)
   <|> exprOperation '-' explSign (\x y -> x - y)
-  <|> term' unit
+  <|> term
   where
     explSign = (char '+' <|> char '-') *> posNumber'
 
 exprOperation :: ∀ a. Char -> Parser a -> (Int -> Int -> Int) -> Parser Int
 exprOperation c p f = do
-  x <- term' unit
+  x <- term
   _ <- char c
   isNext <- parserToBool p
   if isNext
   then empty
   else do
-    y <- expr' unit
+    y <- expr
     pure $ f x y
 
-
-term' :: Unit -> Parser Int
-term' _ = do
-  x <- factor' unit
+term :: Parser Int
+term = do
+  x <- factor
   _ <- char '*'
   isNext <- forbiden
   if isNext
   then empty
   else do
-    y <- term' unit
+    y <- term
     pure $ x * y
-  <|> factor' unit
+  <|> factor
   where
     forbiden = parserToBool $ (char '+' <|> char '-') *> posNumber'
 
-factor' :: Unit -> Parser Int
-factor' _ = do
+factor :: Parser Int
+factor = do
   _ <- char '('
-  x <- expr' unit
+  x <- expr
   _ <- char ')'
   pure x
   <|> number
-
-expr :: Parser Int
-expr = defer expr'
