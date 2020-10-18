@@ -8,4 +8,4 @@
 4. Navigate to project dir: `cd THIS_DIR`
 5. Install dependencies: `spago build`
 6. Bunddle app: `spago bundle-app`
-7. Back to 1st grade!
+7. Open `index.html` and back to 1st grade!
