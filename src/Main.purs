@@ -5,24 +5,35 @@ import Prelude
 import Data.Array (range, (:), head, tail)
 import Data.Int (radix, toStringAs)
 import Data.Maybe (Maybe(..))
+import Data.String as String
 import Data.String.CodeUnits (fromCharArray, toCharArray)
 import Data.Tuple (Tuple(..))
 import Effect (Effect)
+import Effect.Aff.Class (class MonadAff)
 import Halogen as H
 import Halogen.Aff as HA
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
+import Halogen.Query.EventSource (eventListenerEventSource)
 import Halogen.VDom.Driver (runUI)
 import Parser (expr, runParser)
+--import Web.Event.Event as E
+import Web.HTML (window)
+import Web.HTML.HTMLDocument as HTMLDocument
+import Web.HTML.Window (document)
+import Web.UIEvent.KeyboardEvent as KE
+import Web.UIEvent.KeyboardEvent.EventTypes as KET
 
 main :: Effect Unit
 main = HA.runHalogenAff do
   body <- HA.awaitBody
   runUI component unit body
 
-data Action =
-    Clear
+data Action
+  = Initialize
+  | HandleKey H.SubscriptionId KE.KeyboardEvent
+  | Clear
   | Calculate
   | Insert String
   | Undo
@@ -44,12 +55,15 @@ stateToError (Error { message: _, stateHistory: h }) m =
   Error { message: m, stateHistory: h }
 
 
-component :: ∀ query input output m. H.Component HH.HTML query input output m
+component :: ∀ query input output m. MonadAff m => H.Component HH.HTML query input output m
 component =
   H.mkComponent
     { initialState
     , render
-    , eval: H.mkEval $ H.defaultEval { handleAction = handleAction }
+    , eval: H.mkEval $ H.defaultEval
+      { handleAction = handleAction
+      , initialize = Just Initialize
+      }
     }
 
 initialState :: ∀ input. input -> State
@@ -112,12 +126,24 @@ funcpad =
       [ HH.text "undo" ]
   ]
 
-handleAction :: ∀ output m. Action -> H.HalogenM State Action () output m Unit
+handleAction :: ∀ output m. MonadAff m => Action -> H.HalogenM State Action () output m Unit
 handleAction = case _ of
   Clear -> H.put $ initialState unit
   Calculate -> H.modify_ calculate
   Insert s -> H.modify_ $ insertString s
   Undo -> H.modify_ undo
+  Initialize -> do
+    document <- H.liftEffect $ document =<< window
+    H.subscribe' \sid ->
+      eventListenerEventSource
+        KET.keydown
+        (HTMLDocument.toEventTarget document)
+        (map (HandleKey sid) <<< KE.fromEvent)
+
+  HandleKey sid ev -> do
+    let char = KE.key ev
+    when (String.length char == 1) do
+      handleAction $ Insert char
 
 undo :: State -> State
 undo s@(Error { stateHistory: h }) = try restore h s
