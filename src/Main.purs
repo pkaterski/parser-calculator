@@ -5,7 +5,6 @@ import Prelude
 import Data.Array (range, (:), head, tail)
 import Data.Int (radix, toStringAs)
 import Data.Maybe (Maybe(..))
-import Data.String as String
 import Data.String.CodeUnits (fromCharArray, toCharArray)
 import Data.Tuple (Tuple(..))
 import Effect (Effect)
@@ -18,7 +17,6 @@ import Halogen.HTML.Properties as HP
 import Halogen.Query.EventSource (eventListenerEventSource)
 import Halogen.VDom.Driver (runUI)
 import Parser (expr, runParser)
---import Web.Event.Event as E
 import Web.HTML (window)
 import Web.HTML.HTMLDocument as HTMLDocument
 import Web.HTML.Window (document)
@@ -32,7 +30,7 @@ main = HA.runHalogenAff do
 
 data Action
   = Initialize
-  | HandleKey H.SubscriptionId KE.KeyboardEvent
+  | HandleKey KE.KeyboardEvent
   | Clear
   | Calculate
   | Insert String
@@ -126,6 +124,9 @@ funcpad =
       [ HH.text "undo" ]
   ]
 
+-- NOTE:
+-- Components automatically unsubscribe from any event sources when the component finalizes
+
 handleAction :: ∀ output m. MonadAff m => Action -> H.HalogenM State Action () output m Unit
 handleAction = case _ of
   Clear -> H.put $ initialState unit
@@ -134,16 +135,47 @@ handleAction = case _ of
   Undo -> H.modify_ undo
   Initialize -> do
     document <- H.liftEffect $ document =<< window
-    H.subscribe' \sid ->
-      eventListenerEventSource
-        KET.keydown
+    _ <- H.subscribe $ eventListenerEventSource
+      KET.keydown
         (HTMLDocument.toEventTarget document)
-        (map (HandleKey sid) <<< KE.fromEvent)
+        (map HandleKey <<< KE.fromEvent)
+    pure unit
 
-  HandleKey sid ev -> do
-    let char = KE.key ev
-    when (String.length char == 1) do
-      handleAction $ Insert char
+  HandleKey ev
+    | KE.key ev == "Backspace" -> do
+      handleAction Undo
+
+    | KE.key ev == "Enter" -> do
+      handleAction Calculate
+
+    | KE.key ev == "c" || KE.key ev == "C" -> do
+      handleAction Clear
+
+    | otherwise -> do
+      let char = KE.key ev
+      when (isInArray char allowedInput) do
+        handleAction $ Insert char
+
+allowedInput :: Array String
+allowedInput
+  =  ["0","1","2","3","4","5","6","7","8","9"]
+  <> ["(",")"]
+  <> ["+","-","*"]
+
+isInArray :: ∀ a. Eq a => a -> Array a -> Boolean
+isInArray a arr =
+  case deconstruct arr of
+    Just (Tuple x xs) ->
+      if a == x
+      then true
+      else isInArray a xs
+    Nothing -> false
+
+deconstruct :: ∀ a. Array a -> Maybe (Tuple a (Array a))
+deconstruct arr = do
+  x  <- head arr
+  xs <- tail arr
+  pure $ Tuple x xs
 
 undo :: State -> State
 undo s@(Error { stateHistory: h }) = try restore h s
