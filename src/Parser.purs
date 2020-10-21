@@ -2,8 +2,8 @@ module Parser where
 
 import Prelude
 
-import Control.Alternative (class Alt, class Alternative, class Plus, empty, (<|>))
-import Control.Lazy (class Lazy)
+import Control.Alternative (empty, (<|>))
+import Control.Monad.State (StateT(..), runStateT)
 import Data.Array (head, tail, some)
 import Data.Char.Unicode (isDigit)
 import Data.Int (fromString)
@@ -13,52 +13,17 @@ import Data.Tuple (Tuple(..))
 
 type State = Array Char
 
-newtype Parser a = Parser (State -> Maybe (Tuple State a))
+type Parser a = StateT State Maybe a
 
-runParser :: ∀ a. Parser a -> State -> Maybe (Tuple State a)
-runParser (Parser p) s = p s
-
-instance functorParser :: Functor Parser where
-  map f pa = Parser \s -> do
-    Tuple state a <- runParser pa s
-    pure (Tuple state $ f a)
-
-instance applyParser :: Apply Parser where
-  apply pf pa = Parser \s -> do
-    Tuple state f <- runParser pf s
-    Tuple state' a <- runParser pa state
-    pure (Tuple state' $ f a)
-
-instance applicativeParser :: Applicative Parser where
-  pure a = Parser \s -> Just (Tuple s a)
-
-instance bindParser :: Bind Parser where
-  bind pa f = Parser \s -> do
-    Tuple s' a <- runParser pa s
-    runParser (f a) s'
-
-instance monadParser :: Monad Parser
-
-instance altParser :: Alt Parser where
-  alt pa pb = Parser \s ->
-    case runParser pa s of
-      Just res -> Just res
-      Nothing -> runParser pb s
-
-instance plusParser :: Plus Parser where
-  empty = Parser \_ -> Nothing
-
-instance alternativeParser :: Alternative Parser
-
-instance lazyParser :: Lazy (Parser a) where
-  defer f = Parser \s -> runParser (f unit) s
+runParser :: ∀ a. Parser a -> State -> Maybe (Tuple a State)
+runParser = runStateT
 
 charP :: (Char -> Boolean) -> Parser Char
-charP p = Parser \arr -> do
+charP p = StateT \arr -> do
   x  <- head arr -- parsed
   xs <- tail arr -- new state
   if p x
-  then pure $ Tuple xs x
+  then pure $ Tuple x xs
   else Nothing
 
 char :: Char -> Parser Char
@@ -90,9 +55,9 @@ number :: Parser Int
 number = posNumber <|> negNumber
 
 parserToBool :: ∀ a. Parser a -> Parser Boolean
-parserToBool p = Parser \s -> case runParser p s of
-  Just (Tuple s' _)  -> Just $ Tuple s' true
-  Nothing            -> Just $ Tuple s false
+parserToBool p = StateT \s -> case runParser p s of
+  Just (Tuple _ s')  -> Just $ Tuple true s'
+  Nothing            -> Just $ Tuple false s
 
 expr :: Parser Int
 expr
